@@ -54,6 +54,10 @@ typedef enum {
 	SERIAL_8O2 = 0x832,
 } godot_serial_config;
 
+#define GODOT_SERIAL_BIT_LENGTH_MASK 0xF00
+#define GODOT_SERIAL_PARITY_MASK 0x0F0
+#define GODOT_SERIAL_STOP_BIT_MASK 0x00F
+
 typedef struct {
 	GDCALLINGCONV void * (*constructor) (godot_object *p_instance, void *p_method_data);
 	GDCALLINGCONV void (*destructor) (godot_object *p_instance, void *p_method_data, void *p_user_data);
