@@ -47,7 +47,6 @@ static GDCALLINGCONV void destructor(godot_object *p_instance, void *p_method_da
 }
 
 static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
-	godot_string data;
 	godot_variant ret;
 	data_struct * user_data = (data_struct *) p_user_data;
 	
@@ -67,7 +66,6 @@ static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method
 }
 
 static GDCALLINGCONV godot_variant close(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
-	godot_string data;
 	godot_variant ret;
 	data_struct * user_data = (data_struct *) p_user_data;
 	
@@ -81,7 +79,6 @@ static GDCALLINGCONV godot_variant close(godot_object *p_instance, void *p_metho
 }
 
 static GDCALLINGCONV godot_variant is_connected(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
-	godot_string data;
 	godot_variant ret;
 	data_struct * user_data = (data_struct *) p_user_data;
 	
