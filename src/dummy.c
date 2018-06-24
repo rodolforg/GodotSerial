@@ -35,7 +35,7 @@ static GDCALLINGCONV void * constructor(godot_object *p_instance, void *p_method
 	data_struct *data = api->godot_alloc(sizeof(data_struct));
 	data->is_open = false;
 	data->config = SERIAL_8N1;
-/*	data->port = NULL;*/
+	godot_string_new(&data->port);
 
 	return data;
 }
