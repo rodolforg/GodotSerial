@@ -130,7 +130,7 @@ static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method
 		}
 		
 		if (port_config != 0 && api->godot_char_string_length(&port_name_ascii_str) > 0 && !user_data->is_open) {
-			const char *port_name_ascii_str_buffer = godot_char_string_get_data(&port_name_ascii_str);
+			const char *port_name_ascii_str_buffer = api->godot_char_string_get_data(&port_name_ascii_str);
 			if (_open(port_name_ascii_str_buffer, port_config)) {
 				user_data->is_open = true;
 				user_data->config = SERIAL_8N1;
@@ -354,7 +354,7 @@ static GDCALLINGCONV godot_variant write(godot_object *p_instance, void *p_metho
 			memcpy(data_to_write, val, length);
 			ptr = length;
 			api->godot_char_string_destroy(&cstr);
-			godot_string_destroy(&str);
+			api->godot_string_destroy(&str);
 			break;
 		}
 		default:
