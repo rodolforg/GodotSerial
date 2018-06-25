@@ -26,6 +26,7 @@
 #include "serial_interface.h"
 #include <string.h>
 #include <windows.h>
+#include <stdio.h>
 
 typedef struct {
 	bool is_open;
@@ -59,36 +60,53 @@ static GDCALLINGCONV void destructor(godot_object *p_instance, void *p_method_da
 	api->godot_free(p_user_data);
 }
 
-static bool _open(const char* port_name, godot_serial_config config) {
+static bool _open(data_struct * user_data, const char* port_name, godot_serial_config config) {
 	HANDLE hComm;
 	hComm = CreateFile(
-	                  port_name, //Nome da porta.
-	                  GENERIC_READ | GENERIC_WRITE, //Para leitura e escrita.
-	                  0, //(Zero) Nenhuma outra abertura será permitida.
-	                  NULL, //Atributos de segurança. (NULL) padrão.
-	                  OPEN_EXISTING, //Criação ou abertura.
-	                  0, //Entrada e saída sem overlapped.
-	                  NULL //Atributos e Flags. Deve ser NULL para COM.
+	                  port_name,
+	                  GENERIC_READ | GENERIC_WRITE,
+	                  0, // No sharing
+	                  NULL,
+	                  OPEN_EXISTING,
+	                  0, // No overlapped : synchronous reading
+	                  NULL //It must be NULL for COM.
 	);
 
-	if (hComm == INVALID_HANDLE_VALUE)
-		return false; //Erro ao tentar abrir a porta especificada.	
+	if (hComm == INVALID_HANDLE_VALUE) {
+		fprintf(stderr, "Error opening given communication port: %s : %i\n", port_name, GetLastError());
+		return false;
+	}
+	user_data->hComm = hComm;
 
-	DCB dcb; //Estrutura utilizada para definir todos os parâmetros da comunicação.
-	if( !GetCommState(hComm, &dcb))
-		return false; // Erro na leitura de DCB.
+	DCB dcb;
+	if( !GetCommState(hComm, &dcb)) {
+		fprintf(stderr, "Error getting current DCB: %i\n", GetLastError());
+		return false;
+	}
 	
-	const int bitlength = config & GODOT_SERIAL_BIT_LENGTH_MASK;
-	const int parity = config & GODOT_SERIAL_STOP_BIT_MASK;
+	const int bitlength = (config & GODOT_SERIAL_BIT_LENGTH_MASK) >> 8;
+	const int parity = (config & GODOT_SERIAL_PARITY_MASK) >> 4;
 	const int stopbits = config & GODOT_SERIAL_STOP_BIT_MASK;
 	
 	dcb.BaudRate = CBR_19200;
 	dcb.ByteSize = bitlength;
 	dcb.Parity = parity == 0 ? NOPARITY : parity == 1 ? ODDPARITY : EVENPARITY;
 	dcb.StopBits = stopbits == 1 ? ONESTOPBIT : stopbits == 2 ? TWOSTOPBITS : ONE5STOPBITS;
-	//Define novo estado.
-	if( SetCommState(hComm, &dcb) == 0 )
-		return false; //Erro.
+
+	if( SetCommState(hComm, &dcb) == 0 ) {
+		fprintf(stderr, "Error setting DCB (control bits): %03X: %i\n", config, GetLastError());
+		return false;
+	}
+
+	COMMTIMEOUTS timeouts;
+	if (GetCommTimeouts(hComm, &timeouts) != 0) {
+		timeouts.ReadIntervalTimeout = 1; // MAXDWORD
+		timeouts.ReadTotalTimeoutMultiplier = 0; // 0
+		timeouts.ReadTotalTimeoutConstant = 50; // 0 - this combination makes non-block reading
+		if (SetCommTimeouts(hComm, &timeouts) == 0) {
+			fprintf(stderr, "Error setting timeouts: %i\n", GetLastError());
+		}
+	}
 	
 	return true;
 }
@@ -131,7 +149,7 @@ static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method
 		
 		if (port_config != 0 && api->godot_char_string_length(&port_name_ascii_str) > 0 && !user_data->is_open) {
 			const char *port_name_ascii_str_buffer = api->godot_char_string_get_data(&port_name_ascii_str);
-			if (_open(port_name_ascii_str_buffer, port_config)) {
+			if (_open(user_data, port_name_ascii_str_buffer, port_config)) {
 				user_data->is_open = true;
 				user_data->config = SERIAL_8N1;
 				api->godot_string_new_copy(&user_data->port, &port_name_str);
@@ -245,9 +263,9 @@ static GDCALLINGCONV godot_variant peek(godot_object *p_instance, void *p_method
 	godot_variant ret;
 	int val;
 	data_struct * user_data = (data_struct *) p_user_data;
-	
-	if (_available_for_read(user_data) < 1)
+	if (_available_for_read(user_data) < 1) {
 		_read_and_buffer(user_data);
+	}
 
 	if (_available_for_read(user_data) > 0)
 		val = user_data->read_buffer[user_data->read_ptr];
