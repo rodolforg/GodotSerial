@@ -32,6 +32,7 @@ typedef struct {
 	bool is_open;
 	godot_serial_config config;
 	godot_string port;
+	int timeout;
 	
 	HANDLE hComm;
 
@@ -58,6 +59,28 @@ static GDCALLINGCONV void destructor(godot_object *p_instance, void *p_method_da
 	data_struct *data = (data_struct *) p_user_data;
 	api->godot_string_destroy(&data->port);
 	api->godot_free(p_user_data);
+}
+
+static bool _set_timeouts(HANDLE hComm, int read_interval_to, int read_total_to_multi, int read_total_to_constant) {
+	// Use (MAXDWORD, 0, 0) in order to make non-block reading
+	COMMTIMEOUTS timeouts;
+	if (GetCommTimeouts(hComm, &timeouts) != 0) {
+		if (read_interval_to >= 0)
+			timeouts.ReadIntervalTimeout = read_interval_to;
+		if (read_total_to_multi >= 0)
+			timeouts.ReadTotalTimeoutMultiplier = read_total_to_multi;
+		if (read_total_to_constant >= 0)
+			timeouts.ReadTotalTimeoutConstant = read_total_to_constant;
+
+		if (read_interval_to >= 0 || read_total_to_multi >= 0 || read_total_to_constant >= 0) {
+			if (SetCommTimeouts(hComm, &timeouts) == 0) {
+				fprintf(stderr, "Error setting timeouts: %i\n", GetLastError());
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 static bool _open(data_struct * user_data, const char* port_name, godot_serial_config config) {
@@ -98,15 +121,7 @@ static bool _open(data_struct * user_data, const char* port_name, godot_serial_c
 		return false;
 	}
 
-	COMMTIMEOUTS timeouts;
-	if (GetCommTimeouts(hComm, &timeouts) != 0) {
-		timeouts.ReadIntervalTimeout = 1; // MAXDWORD
-		timeouts.ReadTotalTimeoutMultiplier = 0; // 0
-		timeouts.ReadTotalTimeoutConstant = 50; // 0 - this combination makes non-block reading
-		if (SetCommTimeouts(hComm, &timeouts) == 0) {
-			fprintf(stderr, "Error setting timeouts: %i\n", GetLastError());
-		}
-	}
+	_set_timeouts(hComm, 1, 0, 50);
 	
 	return true;
 }
@@ -415,8 +430,22 @@ static GDCALLINGCONV godot_variant write(godot_object *p_instance, void *p_metho
 	return ret;
 }
 
+static GDCALLINGCONV godot_variant set_timeout(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
+	godot_variant ret;
+	data_struct * user_data = (data_struct *) p_user_data;
+	bool success = false;
+	
+	if (p_num_args > 0 && api->godot_variant_get_type(p_args[0]) == GODOT_VARIANT_TYPE_INT) {
+		user_data->timeout = api->godot_variant_as_int(p_args[0]);
+		success = _set_timeouts(user_data->hComm, -1, -1, user_data->timeout);
+	}
+	
+	api->godot_variant_new_bool(&ret, success);
+	return ret;
+}
 
 godot_serial_interface godot_serial_implementation = {constructor, destructor,
                                                       open, close, is_connected,
                                                       available_for_read, available_for_write,
-                                                      flush, peek, read, read_string, write};
+                                                      flush, peek, read, read_string, write,
+                                                      set_timeout};

@@ -76,6 +76,8 @@ typedef struct {
 	GDCALLINGCONV godot_variant (*read) (godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
 	GDCALLINGCONV godot_variant (*read_string) (godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
 	GDCALLINGCONV godot_variant (*write) (godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
+
+	GDCALLINGCONV godot_variant (*set_timeout) (godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
 } godot_serial_interface;
 
 extern godot_serial_interface godot_serial_implementation;

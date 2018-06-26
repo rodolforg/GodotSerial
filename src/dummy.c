@@ -30,6 +30,7 @@ typedef struct {
 	bool is_open;
 	godot_serial_config config;
 	godot_string port;
+	int timeout;
 
 	char buffer[256];
 	unsigned char read_ptr;
@@ -253,8 +254,22 @@ static GDCALLINGCONV godot_variant write(godot_object *p_instance, void *p_metho
 	return ret;
 }
 
+static GDCALLINGCONV godot_variant set_timeout(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
+	godot_variant ret;
+	data_struct * user_data = (data_struct *) p_user_data;
+	bool success = false;
+	
+	if (p_num_args > 0 && api->godot_variant_get_type(p_args[0]) == GODOT_VARIANT_TYPE_INT) {
+		user_data->timeout = api->godot_variant_as_int(p_args[0]);
+		success = true;
+	}
+	
+	api->godot_variant_new_bool(&ret, success);
+	return ret;
+}
 
 godot_serial_interface godot_serial_implementation = {constructor, destructor,
                                                       open, close, is_connected,
                                                       available_for_read, available_for_write,
-                                                      flush, peek, read, read_string, write};
+                                                      flush, peek, read, read_string, write,
+                                                      set_timeout};
