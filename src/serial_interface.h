@@ -59,6 +59,7 @@ typedef enum {
 #define GODOT_SERIAL_STOP_BIT_MASK 0x00F
 
 typedef struct {
+	int version;
 	GDCALLINGCONV void * (*constructor) (godot_object *p_instance, void *p_method_data);
 	GDCALLINGCONV void (*destructor) (godot_object *p_instance, void *p_method_data, void *p_user_data);
 

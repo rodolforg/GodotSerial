@@ -28,6 +28,8 @@
 const godot_gdnative_core_api_struct *api = NULL;
 const godot_gdnative_ext_nativescript_api_struct *nativescript_api = NULL;
 
+static GDCALLINGCONV godot_variant get_version(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
+
 void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options *p_options) {
 	api = p_options->api_struct;
 
@@ -82,5 +84,14 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle) {
 		method_struct.method = method_list[i].method_ptr;
 		nativescript_api->godot_nativescript_register_method(p_handle, "Serial", method_list[i].method_name, attributes, method_struct);
 	}
+	
+	method_struct.method = get_version;
+	method_struct.method_data = &godot_serial_implementation.version;
+	nativescript_api->godot_nativescript_register_method(p_handle, "Serial", "get_version", attributes, method_struct);
 }
 
+static GDCALLINGCONV godot_variant get_version(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args) {
+	godot_variant ret;
+	api->godot_variant_new_int(&ret, *(int*)p_method_data);
+	return ret;
+}
