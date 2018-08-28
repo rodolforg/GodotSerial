@@ -83,7 +83,7 @@ static bool _set_timeouts(HANDLE hComm, int read_interval_to, int read_total_to_
 	return false;
 }
 
-static bool _open(data_struct * user_data, const char* port_name, godot_serial_config config) {
+static bool _open(data_struct * user_data, const char* port_name, int baudrate, godot_serial_config config) {
 	HANDLE hComm;
 	hComm = CreateFile(
 	                  port_name,
@@ -111,7 +111,7 @@ static bool _open(data_struct * user_data, const char* port_name, godot_serial_c
 	const int parity = (config & GODOT_SERIAL_PARITY_MASK) >> 4;
 	const int stopbits = config & GODOT_SERIAL_STOP_BIT_MASK;
 	
-	dcb.BaudRate = CBR_19200;
+	dcb.BaudRate = baudrate;// CBR_19200;
 	dcb.ByteSize = bitlength;
 	dcb.Parity = parity == 0 ? NOPARITY : parity == 1 ? ODDPARITY : EVENPARITY;
 	dcb.StopBits = stopbits == 1 ? ONESTOPBIT : stopbits == 2 ? TWOSTOPBITS : ONE5STOPBITS;
@@ -135,12 +135,21 @@ static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method
 		godot_string port_name_str = api->godot_variant_as_string(p_args[0]);
 		godot_char_string port_name_ascii_str = api->godot_string_ascii(&port_name_str);
 		
-		godot_serial_config port_config = SERIAL_8N1;
-		if (p_num_args >= 2) {
+		int baudrate = CBR_19200;
+		if (p_num_args >= 2){
 			if (api->godot_variant_get_type(p_args[1]) == GODOT_VARIANT_TYPE_INT) {
-				port_config = api->godot_variant_as_int(p_args[1]);
-			} else if (api->godot_variant_get_type(p_args[1]) == GODOT_VARIANT_TYPE_STRING) {
-				godot_string port_config_str = api->godot_variant_as_string(p_args[1]);
+				baudrate = api->godot_variant_as_int(p_args[1]);
+			} else {
+				baudrate = 0;
+			}
+		}
+		
+		godot_serial_config port_config = SERIAL_8N1;
+		if (p_num_args >= 3) {
+			if (api->godot_variant_get_type(p_args[2]) == GODOT_VARIANT_TYPE_INT) {
+				port_config = api->godot_variant_as_int(p_args[2]);
+			} else if (api->godot_variant_get_type(p_args[2]) == GODOT_VARIANT_TYPE_STRING) {
+				godot_string port_config_str = api->godot_variant_as_string(p_args[2]);
 				godot_char_string port_config_ascii_str = api->godot_string_ascii(&port_config_str);
 				if (api->godot_char_string_length(&port_config_ascii_str) != 3) {
 					port_config = 0;
@@ -162,9 +171,9 @@ static GDCALLINGCONV godot_variant open(godot_object *p_instance, void *p_method
 			}
 		}
 		
-		if (port_config != 0 && api->godot_char_string_length(&port_name_ascii_str) > 0 && !user_data->is_open) {
+		if (baudrate != 0 && port_config != 0 && api->godot_char_string_length(&port_name_ascii_str) > 0 && !user_data->is_open) {
 			const char *port_name_ascii_str_buffer = api->godot_char_string_get_data(&port_name_ascii_str);
-			if (_open(user_data, port_name_ascii_str_buffer, port_config)) {
+			if (_open(user_data, port_name_ascii_str_buffer, baudrate, port_config)) {
 				user_data->is_open = true;
 				user_data->config = SERIAL_8N1;
 				api->godot_string_new_copy(&user_data->port, &port_name_str);
@@ -444,7 +453,7 @@ static GDCALLINGCONV godot_variant set_timeout(godot_object *p_instance, void *p
 	return ret;
 }
 
-godot_serial_interface godot_serial_implementation = {0x01,
+godot_serial_interface godot_serial_implementation = {0x02,
                                                       constructor, destructor,
                                                       open, close, is_connected,
                                                       available_for_read, available_for_write,

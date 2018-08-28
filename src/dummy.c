@@ -268,7 +268,7 @@ static GDCALLINGCONV godot_variant set_timeout(godot_object *p_instance, void *p
 	return ret;
 }
 
-godot_serial_interface godot_serial_implementation = {0x01,
+godot_serial_interface godot_serial_implementation = {0x02,
                                                       constructor, destructor,
                                                       open, close, is_connected,
                                                       available_for_read, available_for_write,
