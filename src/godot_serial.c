@@ -59,7 +59,8 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle) {
 
 	nativescript_api->godot_nativescript_register_class(p_handle, "Serial", "Reference", create, destroy);
 
-	#define n_methods (sizeof(godot_serial_interface) / sizeof(godot_variant (*)(godot_object *, void *, void *, int , godot_variant **)) - 2)
+	// exclude version info, constructor and destructor
+	#define n_methods (sizeof(godot_serial_interface) / sizeof(godot_variant (*)(godot_object *, void *, void *, int , godot_variant **)) - 3)
 
 	struct {
 		GDCALLINGCONV godot_variant (*method_ptr)(godot_object *p_instance, void *p_method_data, void *p_user_data, int p_num_args, godot_variant **p_args);
